@@ -29,16 +29,58 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
   std::vector<ec::Float> outputSpectrum(sizeSpectrum, std::numeric_limits<float>::lowest());
 
   size_t idxStartWin = 0;
+  ec::Float blackmanWinCoef;
+  ec::VecHw& vecHw = *ec::VecHw::getSingletonVecHw();
 
   for (size_t J = 0; J < numWins; J++)
   {
+
+    
+    vecHw.resetMemTo0();
+
     for (size_t I = 0; I < WINDOW_SIZE; I++)
     {
-      ec::Float blackmanWinCoef = 0.42f - 0.5f * ec_cos(ec::Float(I) * 2.0f * PI / (WINDOW_SIZE - 1));                                         
-      blackmanWinCoef = blackmanWinCoef + 0.08f * ec_cos(ec::Float(I) * 4.0f * PI / (WINDOW_SIZE - 1));
-
-      signalWindow[I] = inputSignal[I + idxStartWin] * blackmanWinCoef;
+      // signalWindow[I] = ec::Float(I) * 2.0f * PI / (WINDOW_SIZE - 1);
+      signalWindow[I] = ec::Float(I);
     }
+
+    vecHw.copyToHw(signalWindow, 0, WINDOW_SIZE, 0);
+    vecHw.copyToHw(signalWindow, 0, WINDOW_SIZE, WINDOW_SIZE);
+
+    for (size_t ii = 0; ii < (size_t)(2 * WINDOW_SIZE / 32); ii++) {
+        vecHw.mul32(ii * 32, ec::Float(PI), ii * 32, 32ull);
+        vecHw.mul32(ii * 32, ec::Float(1/(WINDOW_SIZE - 1)), ii * 32, 32ull);
+
+        if (ii < (size_t)(WINDOW_SIZE / 32)) {
+            vecHw.mul32(ii * 32, ec::Float(2.0f), ii * 32, 32ull);  
+            vecHw.mul32(WINDOW_SIZE + ii * 32, ec::Float(4.0f), WINDOW_SIZE + ii * 32, 32ULL);
+        }
+    }
+
+    for (size_t ii = 0; ii < (size_t)(WINDOW_SIZE / 4); ii++) {
+        vecHw.cos4(ii * 4, ii * 4, 4ull);
+    }
+
+    for (size_t ii = 0; ii < (size_t)(WINDOW_SIZE / 32); ii++) {
+        vecHw.mul32(ii * 32, ec::Float(-0.5f), ii * 32, 32ull);
+        vecHw.mul32(WINDOW_SIZE + ii * 32, ec::Float(0.08f), WINDOW_SIZE + ii * 32, 32ull);
+    }
+
+    for (size_t ii = 0; ii < (size_t)(WINDOW_SIZE / 32); ii++) {
+        vecHw.add32(ii * 32, ec::Float(0.42f), ii * 32, 32ull);
+        vecHw.add32(ii * 32, WINDOW_SIZE + ii * 32, ii * 32, 32ull);
+    }
+
+    vecHw.copyToHw(inputSignal, idxStartWin, WINDOW_SIZE, WINDOW_SIZE);
+    for (size_t ii = 0; ii < (size_t)(WINDOW_SIZE / 32); ii++) {
+        vecHw.mul32(ii * 32, WINDOW_SIZE + ii * 32, ii * 32, 32ull);
+    }
+    vecHw.copyFromHw(signalWindow, 0, WINDOW_SIZE, 0);
+
+      // blackmanWinCoef = 0.42f - 0.5f * ec_cos(ec::Float(I) * 2.0f * PI / (WINDOW_SIZE - 1));                                         
+      // blackmanWinCoef = blackmanWinCoef + 0.08f * ec_cos(ec::Float(I) * 4.0f * PI / (WINDOW_SIZE - 1));
+
+      // signalWindow[I] = inputSignal[I + idxStartWin] * blackmanWinCoef;
 
     compute_fourier_transform(signalWindow, signalFreqReal, signalFreqImag);
 
