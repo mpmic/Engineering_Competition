@@ -136,18 +136,15 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
 
 //   return;
 // }
-
-    std::vector<ec::Float> getEvenOddTerms(std::vector<ec::Float> x, int b) {
-        std::vector<ec::Float> y(x.size() / 2);
-        for (int i = 0 + b; i < x.size(); i += 2) {
-            y[i] = (x[i]);
+    void compute_fourier_transform(const std::vector<ec::Float>& input, std::vector<ec::Float>& outputReal, std::vector<ec::Float>& outputImag) {
+        std::vector<ec::Float> inputExt(2 * input.size());
+        
+        for (size_t ii = 0; ii < input.size(); ii++) {
+            inputExt[ii] = input[ii];
+            inputExt[ii + input.size()] = 0.0;
         }
 
-        return y;
-    }
-
-    void compute_fourier_transform(const std::vector<ec::Float>& input, std::vector<ec::Float>& outputReal, std::vector<ec::Float>& outputImag) {
-        std::vector<ec::Float> FFT_Out = fftCompute(input, input.size());
+        std::vector<ec::Float> FFT_Out = fftCompute(inputExt, input.size());
 
         for (size_t ii = 0; ii < input.size(); ii++) {
             outputReal[ii] = FFT_Out[ii];
@@ -181,6 +178,17 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
         return W;
     }
 
+    
+    std::vector<ec::Float> getEvenOddTerms(std::vector<ec::Float> x, int b) {
+        std::vector<ec::Float> y(x.size() / 2);
+        for (int i = 0 + b; i < x.size(); i += 2) {
+            y[i] = (x[i]);
+        }
+
+        return y;
+    }
+
+
     std::vector<ec::Float> fftCompute(const std::vector<ec::Float>& input, size_t N) {
         if (N == 2) {
             std::vector<ec::Float> y(4);
@@ -195,9 +203,9 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
         std::vector<ec::Float> tmp1, tmp2, fft1, fft2;
         tmp1 = getEvenOddTerms(input, 0);
         tmp2 = getEvenOddTerms(input, 1);
-        fft1 = fftCompute(tmp1 , N/2);
-        fft2 = fftCompute(tmp2 , N/2);
-        return fftCombine(fft1, fft2, N);
+        fft1 = fftCompute(input , N/2);
+        fft2 = fftCompute(input , N/2);
+        return fftCombine(tmp1, tmp2, N);
     }
 
 
