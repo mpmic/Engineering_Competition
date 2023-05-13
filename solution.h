@@ -116,7 +116,7 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
   std::vector<ec::Float> spectrumWindow(sizeSpectrum);
 
   // Create a vector to store the final output spectrum, initialized with the lowest possible values
-  std::vector<ec::Float> outputSpectrum(sizeSpectrum, std::numeric_limits<float>::lowest());
+  std::vector<ec::Float> outputSpectrum(sizeSpectrum);
 
   // Create a vector to store the Blackman window coefficients
   std::vector<ec::Float> blackmanWinCoef(WINDOW_SIZE);
