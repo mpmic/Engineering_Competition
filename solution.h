@@ -23,38 +23,45 @@ static constexpr size_t WINDOW_SIZE = 1024; // Define the size of each window
 typedef std::complex<ec::Float> Complex; // Define the complex number type
 typedef std::valarray<Complex> CArray; // Define the valarray of complex numbers type
 
-// Cooley–Tukey FFT (in-place, divide-and-conquer)
 void fft(CArray& x)
 {
   const size_t N = x.size();
-  // Base case: if the size is 1 or less, no further computation is needed
   if (N <= 1) return;
 
-  // Split the input array into even-indexed elements
-  CArray even = x[std::slice(0, N/2, 2)];
-  // Split the input array into odd-indexed elements
-  CArray  odd = x[std::slice(1, N/2, 2)];
+  CArray tmp(N);
 
-  // Recursively compute the FFT on the even-indexed elements
-  fft(even);
-	//  Recursively compute the FFT on the odd-indexed elements
-  fft(odd);
-
-  for (size_t k = 0; k < N/2; ++k)
-  {
-	// Compute the twiddle factor for the kth frequency bin
-	ec::Float real_part = ec::Float(1.0f) * ec::ec_cos(-2.0f * PI * ec::Float(k) / ec::Float(N));
-	ec::Float imag_part = ec::Float(1.0f) * ec::ec_sin(-2.0f * PI * ec::Float(k) / ec::Float(N));
-
-	// Apply the twiddle factor to the odd-indexed element
-	Complex t = Complex(real_part, imag_part) * odd[k];
-
-	// Combine the even-indexed element with the transformed odd-indexed element
-	x[k    ] = even[k] + t;
-	// Combine the even-indexed element with the conjugate of the transformed odd-indexed element
-	x[k+N/2] = even[k] - t;
+  // Rearrange the input array using bit reversal
+  for (size_t i = 0; i < N; ++i) {
+	size_t j = 0;
+	for (size_t bit = 0; bit < std::floor(std::log2(N)); ++bit) {
+	  if (i & (1 << bit)) {
+		j |= (1 << static_cast<int>(std::floor(std::log2(N)) - 1 - bit));
+	  }
+	}
+	tmp[j] = x[i];
   }
+
+  // In-place butterfly operations
+  for (size_t len = 2; len <= N; len *= 2) {
+	ec::Float real_part = ec::Float(1.0f) * ec::ec_cos(-2.0f * PI / ec::Float(len));
+	ec::Float imag_part = ec::Float(1.0f) * ec::ec_sin(-2.0f * PI / ec::Float(len));
+	Complex wlen(real_part, imag_part);
+
+	for (size_t start = 0; start < N; start += len) {
+	  Complex w(1);
+	  for (size_t i = 0; i < len / 2; ++i) {
+		Complex u = tmp[start + i];
+		Complex v = tmp[start + i + len / 2] * w;
+		tmp[start + i] = u + v;
+		tmp[start + i + len / 2] = u - v;
+		w *= wlen;
+	  }
+	}
+  }
+
+  x = tmp;
 }
+
 
 // Function to compute the Fourier transform of the input signal
 void compute_fourier_transform(const std::vector<ec::Float>& input, std::vector<ec::Float>& outputReal, std::vector<ec::Float>& outputImag)
