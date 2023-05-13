@@ -182,7 +182,7 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
     std::vector<ec::Float> getEvenOddTerms(std::vector<ec::Float> x, int b) {
         std::vector<ec::Float> y(x.size() / 2);
         for (int i = 0 + b; i < x.size(); i += 2) {
-            y[i] = (x[i]);
+            y[i/2] = (x[i]);
         }
 
         return y;
