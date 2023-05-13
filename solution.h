@@ -203,9 +203,9 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
         std::vector<ec::Float> tmp1, tmp2, fft1, fft2;
         tmp1 = getEvenOddTerms(input, 0);
         tmp2 = getEvenOddTerms(input, 1);
-        fft1 = fftCompute(input , N/2);
-        fft2 = fftCompute(input , N/2);
-        return fftCombine(tmp1, tmp2, N);
+        fft1 = fftCompute(tmp1 , N/2);
+        fft2 = fftCompute(tmp2 , N/2);
+        return fftCombine(fft1, fft2, N);
     }
 
 
