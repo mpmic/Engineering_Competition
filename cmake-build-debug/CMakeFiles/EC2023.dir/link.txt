@@ -1,0 +1,1 @@
+/usr/bin/clang++ -g CMakeFiles/EC2023.dir/main.cpp.o -o bin/EC2023 

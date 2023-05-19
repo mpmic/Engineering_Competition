@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="EC2023"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="clang"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="EC2023">
+				<Option output="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/bin/EC2023" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/bin"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main"/>
+					<Add directory="/usr/bin/../lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"/>
+					<Add directory="/usr/bin/../lib/gcc/x86_64-linux-gnu/10/../../../../include/x86_64-linux-gnu/c++/10"/>
+					<Add directory="/usr/bin/../lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/llvm-11/lib/clang/11.0.1/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 EC2023"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="EC2023/fast">
+				<Option output="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/bin/EC2023" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/bin"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main"/>
+					<Add directory="/usr/bin/../lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"/>
+					<Add directory="/usr/bin/../lib/gcc/x86_64-linux-gnu/10/../../../../include/x86_64-linux-gnu/c++/10"/>
+					<Add directory="/usr/bin/../lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/llvm-11/lib/clang/11.0.1/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 EC2023/fast"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/ec2023/ec2023.h">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/ec2023/ec_float.h">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/ec2023/ec_math.h">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/ec2023/ec_measurement.h">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/ec2023/ec_signal_reader.h">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/ec2023/ec_stream_hw.h">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/ec2023/ec_vec_hw.h">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/main.cpp">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/solution.h">
+			<Option target="EC2023"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/mpmic/Desktop/qualifiying_2023-main/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

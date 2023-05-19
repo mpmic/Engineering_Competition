@@ -10,36 +10,20 @@
 #pragma once
 
 #include "ec2023/ec2023.h"
-#include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <vector>
 #include <complex>
 #include <valarray>
-#include <array>
-#include <cmath>
+#include "ec2023/ec_stream_hw.h"
 
 static constexpr float PI = 3.14159265358979323846f; // Define the constant PI
 static constexpr float OVERLAP_RATIO = 0.75; // Define the overlap ratio for windowing
 static constexpr size_t WINDOW_SIZE = 1024; // Define the size of each window
 
-constexpr double cosine(double x, int terms = 40) {
-  double term = 1;  // The first term in the series is always 1
-  double result = term;
-
-  double x_squared = x*x;
-  for(int i = 1; i < terms; ++i) {
-	term *= -x_squared / ((2*i) * (2*i-1));  // Multiply the last term by -x_squared/(2n*(2n-1))
-	result += term;
-  }
-
-  return result;
-}
-
-
 constexpr float blackman(size_t i, size_t windowSize) {
-  return 0.42f - 0.5f * cosine(2.0f * PI * i / (windowSize - 1)) +
-	  0.08f * cosine(4.0f * PI * i / (windowSize - 1));
+  return 0.42f - 0.5f * std::cos(2.0f * PI * i / (windowSize - 1)) +
+	  0.08f *  std::cos(4.0f * PI * i / (windowSize - 1));
 }
 
 template<std::size_t... I>
@@ -51,52 +35,60 @@ constexpr auto constantBlackmanWinCoef() {
   return blackmanWinCoef(std::make_index_sequence<WINDOW_SIZE>{});
 }
 
-
 typedef std::complex<ec::Float> Complex; // Define the complex number type
 typedef std::valarray<Complex> CArray; // Define the valarray of complex numbers type
 
-// Cooley–Tukey FFT (in-place, divide-and-conquer)
-void fft(CArray &x) {
+void fft(CArray& x)
+{
   const size_t N = x.size();
-  // Base case: if the size is 1 or less, no further computation is needed
   if (N <= 1) return;
 
-  // Split the input array into even-indexed elements
-  CArray even = x[std::slice(0, N / 2, 2)];
-  // Split the input array into odd-indexed elements
-  CArray odd = x[std::slice(1, N / 2, 2)];
+  CArray tmp(N);
 
-  // Recursively compute the FFT on the even-indexed elements
-  fft(even);
-  //  Recursively compute the FFT on the odd-indexed elements
-  fft(odd);
-
-  for (size_t k = 0; k < N / 2; ++k) {
-	// Compute the twiddle factor for the kth frequency bin
-
-	constexpr float minusTwoPi = PI * -2.0f;
-
-	ec::Float real_part = ec::ec_cos(ec::Float(k) * ec::Float(minusTwoPi)/N);
-	ec::Float imag_part = ec::ec_sin(ec::Float(k) * ec::Float(minusTwoPi)/N);
-
-	// Apply the twiddle factor to the odd-indexed element
-	Complex t = Complex(real_part, imag_part) * odd[k];
-
-	// Combine the even-indexed element with the transformed odd-indexed element
-	x[k] = even[k] + t;
-	// Combine the even-indexed element with the conjugate of the transformed odd-indexed element
-	x[k + N / 2] = even[k] - t;
+  // Rearrange the input array using bit reversal
+  for (size_t i = 0; i < N; ++i) {
+	size_t j = 0;
+	for (size_t bit = 0; bit < std::floor(std::log2(N)); ++bit) {
+	  if (i & (1 << bit)) {
+		j |= (1 << static_cast<int>(std::floor(std::log2(N)) - 1 - bit));
+	  }
+	}
+	tmp[j] = x[i];
   }
+
+  // In-place butterfly operations
+  for (size_t len = 2; len <= N; len *= 2) {
+	constexpr float minusTwoPi = PI * -2.0f;
+	ec::Float real_part = ec::ec_cos(minusTwoPi/ ec::Float(len));
+	ec::Float imag_part = ec::ec_sin(minusTwoPi/ ec::Float(len));
+	Complex wlen(real_part, imag_part);
+
+	for (size_t start = 0; start < N; start += len) {
+	  Complex w(1);
+	  for (size_t i = 0; i < len / 2; ++i) {
+		Complex u = tmp[start + i];
+		Complex v = tmp[start + i + len / 2] * w;
+		tmp[start + i] = u + v;
+		tmp[start + i + len / 2] = u - v;
+		w *= wlen;
+	  }
+	}
+  }
+
+  x = tmp;
 }
 
+
 // Function to compute the Fourier transform of the input signal
-CArray compute_fourier_transform(const std::vector<ec::Float> &input) {
+CArray compute_fourier_transform(const std::vector<ec::Float>& input)
+{
   size_t inputSize = input.size();
 
   // Create a complex valarray of ec::Float to store the input data
   CArray data(inputSize);
 
-  for (size_t i = 0; i < inputSize; ++i) {
+  for (size_t i = 0; i < inputSize; ++i)
+  {
 	// Convert each input sample to a complex
 	data[i] = Complex(input[i], ec::Float(0.0f));
 
@@ -109,14 +101,15 @@ CArray compute_fourier_transform(const std::vector<ec::Float> &input) {
 }
 
 // Function to process the input signal and compute the spectrum
-std::vector<ec::Float> process_signal(const std::vector<ec::Float> &inputSignal) {
+std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
+{
   const size_t numSamples = inputSignal.size();
 
   // Compute the size of the spectrum
   const size_t sizeSpectrum = (WINDOW_SIZE / 2) + 1;
 
   // Compute the step size between windows
-  const auto stepBetweenWins = static_cast<size_t>(ceil(WINDOW_SIZE * (1 - OVERLAP_RATIO)));
+  const size_t stepBetweenWins = static_cast<size_t>(ceil(WINDOW_SIZE * (1 - OVERLAP_RATIO)));
 
   // Compute the number of windows
   const size_t numWins = (numSamples - WINDOW_SIZE) / stepBetweenWins + 1;
@@ -183,4 +176,5 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float> &inputSignal)
 
   return outputSpectrum;
 }
+
 
