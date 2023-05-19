@@ -10,6 +10,7 @@
 #pragma once
 
 #include "ec2023/ec2023.h"
+#include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <vector>
@@ -22,9 +23,23 @@ static constexpr float PI = 3.14159265358979323846f; // Define the constant PI
 static constexpr float OVERLAP_RATIO = 0.75; // Define the overlap ratio for windowing
 static constexpr size_t WINDOW_SIZE = 1024; // Define the size of each window
 
+constexpr double cosine(double x, int terms = 40) {
+  double term = 1;  // The first term in the series is always 1
+  double result = term;
+
+  double x_squared = x*x;
+  for(int i = 1; i < terms; ++i) {
+	term *= -x_squared / ((2*i) * (2*i-1));  // Multiply the last term by -x_squared/(2n*(2n-1))
+	result += term;
+  }
+
+  return result;
+}
+
+
 constexpr float blackman(size_t i, size_t windowSize) {
-  return 0.42f - 0.5f * std::cos(2.0f * PI * i / (windowSize - 1)) +
-	  0.08f * std::cos(4.0f * PI * i / (windowSize - 1));
+  return 0.42f - 0.5f * cosine(2.0f * PI * i / (windowSize - 1)) +
+	  0.08f * cosine(4.0f * PI * i / (windowSize - 1));
 }
 
 template<std::size_t... I>
@@ -58,8 +73,11 @@ void fft(CArray &x) {
 
   for (size_t k = 0; k < N / 2; ++k) {
 	// Compute the twiddle factor for the kth frequency bin
-	ec::Float real_part = ec::ec_cos(PI * ec::Float(k) * ec::Float(-2.0f/N));
-	ec::Float imag_part = ec::ec_sin(PI * ec::Float(k) * ec::Float(-2.0f/N));
+
+	constexpr float minusTwoPi = PI * -2.0f;
+
+	ec::Float real_part = ec::ec_cos(ec::Float(k) * ec::Float(minusTwoPi)/N);
+	ec::Float imag_part = ec::ec_sin(ec::Float(k) * ec::Float(minusTwoPi)/N);
 
 	// Apply the twiddle factor to the odd-indexed element
 	Complex t = Complex(real_part, imag_part) * odd[k];
@@ -87,19 +105,7 @@ CArray compute_fourier_transform(const std::vector<ec::Float> &input) {
   // Compute the FFT of the input data using the Cooley-Tukey algorithm
   fft(data);
 
-//  // Clear the output vectors
-//  outputReal.clear();
-//
-//  // Resize the output vectors to match the input size
-//  outputImag.resize(inputSize);
-//
-//  for (size_t i = 0; i < inputSize; ++i) {
-//	// Extract the real part of the transformed data
-//	outputReal[i] = data[i].real();
-//	// Extract the imaginary part of the transformed data
-//	outputImag[i] = data[i].imag();
-//  }
-	return data;
+  return data;
 }
 
 // Function to process the input signal and compute the spectrum
@@ -117,10 +123,6 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float> &inputSignal)
 
   // Create a vector to store each signal window
   std::vector<ec::Float> signalWindow(WINDOW_SIZE);
-
-//  // Create vectors to store the real and imaginary parts of the transformed signal
-//  std::vector<ec::Float> signalFreqReal(WINDOW_SIZE);
-//  std::vector<ec::Float> signalFreqImag(WINDOW_SIZE);
 
   // Create a vector to store the spectrum for each window
   std::vector<ec::Float> spectrumWindow(sizeSpectrum);
@@ -155,7 +157,8 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float> &inputSignal)
 	  ec::Float freqVal = data[I].real() * data[I].real() + data[I].imag() * data[I].imag();
 
 	  // Take the square root to obtain the magnitude
-	  freqVal = ec_sqrt(freqVal) * 1.0f / WINDOW_SIZE;
+	  constexpr float oneByWindowSize = (1.0f / WINDOW_SIZE);
+	  freqVal = ec_sqrt(freqVal) * oneByWindowSize;
 
 //	  // Normalize the magnitude by the window size
 //	  freqVal = freqVal * ec::Float(1 / WINDOW_SIZE);
@@ -167,7 +170,7 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float> &inputSignal)
 	  freqVal = freqVal * freqVal;
 
 	  // Convert the power spectrum to decibels
-	  freqVal = 10.0f * ec_log10(1000.0f * freqVal);
+	  freqVal = 10.0f * (3 + ec_log10(freqVal));
 
 	  // Update the output spectrum by taking the maximum value for each frequency bin
 	  outputSpectrum[I] = ec_max(outputSpectrum[I], freqVal);
