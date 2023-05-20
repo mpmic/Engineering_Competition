@@ -15,11 +15,14 @@
 #include <vector>
 #include <complex>
 #include <valarray>
+#include <cmath>
 #include "ec2023/ec_stream_hw.h"
 
 static constexpr float PI = 3.14159265358979323846f; // Define the constant PI
 static constexpr float OVERLAP_RATIO = 0.75; // Define the overlap ratio for windowing
 static constexpr size_t WINDOW_SIZE = 1024; // Define the size of each window
+static constexpr float MINUS_TWO_PI = PI * -2.0f;
+static constexpr size_t MAX_TWIDDLE_N = 1024*1024*1024;
 
 constexpr float blackman(size_t i, size_t windowSize) {
   return 0.42f - 0.5f * std::cos(2.0f * PI * i / (windowSize - 1)) +
@@ -35,6 +38,37 @@ constexpr auto constantBlackmanWinCoef() {
   return blackmanWinCoef(std::make_index_sequence<WINDOW_SIZE>{});
 }
 
+constexpr unsigned floorlog2(unsigned x)
+{
+  return x == 1 ? 0 : 1+floorlog2(x >> 1);
+}
+
+constexpr unsigned ceillog2(unsigned x)
+{
+  return x == 1 ? 0 : floorlog2(x - 1) + 1;
+}
+
+static constexpr size_t logTwiddleN = ceillog2(MAX_TWIDDLE_N);
+
+// Compile-time computation of twiddle factors
+constexpr std::array<std::complex<float>, logTwiddleN> generateTwiddleFactors() {
+
+  std::array<std::complex<float>, logTwiddleN> twiddleFactors;
+
+  for (size_t len = 2; len <= MAX_TWIDDLE_N; len *= 2) {
+
+	size_t index = floorlog2(len) - 1;
+
+	float realPart = std::cos(MINUS_TWO_PI / len);
+	float imagPart = std::sin(MINUS_TWO_PI / len);
+	std::complex<float> twiddleFactor(realPart, imagPart);
+	twiddleFactors[index] = twiddleFactor;
+  }
+
+  return twiddleFactors;
+}
+
+
 typedef std::complex<ec::Float> Complex; // Define the complex number type
 typedef std::valarray<Complex> CArray; // Define the valarray of complex numbers type
 
@@ -43,7 +77,7 @@ void fft(CArray& x)
   const size_t N = x.size();
   if (N <= 1) return;
 
-  CArray tmp(N);
+  CArray rearrangedData(N);
 
   // Rearrange the input array using bit reversal
   for (size_t i = 0; i < N; ++i) {
@@ -53,31 +87,47 @@ void fft(CArray& x)
 		j |= (1 << static_cast<int>(std::floor(std::log2(N)) - 1 - bit));
 	  }
 	}
-	tmp[j] = x[i];
+	rearrangedData[j] = x[i];
   }
+
+  auto preComputedTwiddleFactors = generateTwiddleFactors();
+  size_t preCompIndex = 0;
 
   // In-place butterfly operations
   for (size_t len = 2; len <= N; len *= 2) {
-	constexpr float minusTwoPi = PI * -2.0f;
-	ec::Float real_part = ec::ec_cos(minusTwoPi/ ec::Float(len));
-	ec::Float imag_part = ec::ec_sin(minusTwoPi/ ec::Float(len));
-	Complex wlen(real_part, imag_part);
+
+
+	Complex twiddleFactor;
+
+	if (len<=MAX_TWIDDLE_N){
+
+	  twiddleFactor = preComputedTwiddleFactors[preCompIndex];
+	}
+
+	else{
+	  ec::Float realPart = ec::ec_cos(MINUS_TWO_PI / ec::Float(len));
+	  ec::Float imagPart = ec::ec_sin(MINUS_TWO_PI / ec::Float(len));
+	twiddleFactor.real(realPart);
+	twiddleFactor.real(imagPart);
+
+	}
 
 	for (size_t start = 0; start < N; start += len) {
 	  Complex w(1);
+
 	  for (size_t i = 0; i < len / 2; ++i) {
-		Complex u = tmp[start + i];
-		Complex v = tmp[start + i + len / 2] * w;
-		tmp[start + i] = u + v;
-		tmp[start + i + len / 2] = u - v;
-		w *= wlen;
+		Complex twiddleProduct = rearrangedData[start + i + len / 2] * w;
+		rearrangedData[start + i + len / 2] = rearrangedData[start + i] - twiddleProduct;
+		rearrangedData[start + i] += twiddleProduct;
+		w *= twiddleFactor;
 	  }
+
 	}
+	++preCompIndex;
   }
 
-  x = tmp;
+  x = std::move(rearrangedData);
 }
-
 
 // Function to compute the Fourier transform of the input signal
 CArray compute_fourier_transform(const std::vector<ec::Float>& input)
@@ -123,14 +173,8 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
   // Create a vector to store the final output spectrum, initialized with the lowest possible values
   std::vector<ec::Float> outputSpectrum(sizeSpectrum);
 
-  // Create a vector to store the Blackman window coefficients
-  std::vector<ec::Float> blackmanWinCoef(WINDOW_SIZE);
-  auto constantBlackmanCoefficients = constantBlackmanWinCoef();
+  std::array<float, WINDOW_SIZE> blackmanWinCoef = constantBlackmanWinCoef();
 
-  for (size_t I = 0; I < WINDOW_SIZE; I++) {
-	// Compute the Blackman window coefficient for each sample
-	blackmanWinCoef[I] = constantBlackmanCoefficients[I];
-  }
 
   // Initialize the starting index of the current window
   size_t idxStartWin = 0;
@@ -146,27 +190,31 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
 
 	for (size_t I = 0; I < sizeSpectrum; I++) {
 
+	  constexpr float oneByWindowSize = (1.0f / WINDOW_SIZE);
 //	  ec::Float freqVal = signalFreqReal[I] * signalFreqReal[I] + signalFreqImag[I] * signalFreqImag[I];
-	  ec::Float freqVal = data[I].real() * data[I].real() + data[I].imag() * data[I].imag();
+	  ec::Float freqVal = (I > 0 && I < sizeSpectrum - 1) ?
+		  ec_sqrt(data[I].real() * data[I].real() + data[I].imag() * data[I].imag()) * oneByWindowSize * 2.0f:
+		  ec_sqrt(data[I].real() * data[I].real() + data[I].imag() * data[I].imag()) * oneByWindowSize ;
 
 	  // Take the square root to obtain the magnitude
-	  constexpr float oneByWindowSize = (1.0f / WINDOW_SIZE);
-	  freqVal = ec_sqrt(freqVal) * oneByWindowSize;
+//	  constexpr float oneByWindowSize = (1.0f / WINDOW_SIZE);
+//	  freqVal = ec_sqrt(freqVal) * oneByWindowSize;
 
 //	  // Normalize the magnitude by the window size
 //	  freqVal = freqVal * ec::Float(1 / WINDOW_SIZE);
 
-	  // Scale the magnitude by a factor of 2 for non-zero and non-DC frequency bins
-	  if (I > 0 && I < sizeSpectrum - 1) freqVal = freqVal * 2.0f;
-
-	  // Square the magnitude to obtain the power spectrum
-	  freqVal = freqVal * freqVal;
+//	  // Scale the magnitude by a factor of 2 for non-zero and non-DC frequency bins
+//	  if (I > 0 && I < sizeSpectrum - 1) freqVal = freqVal * 2.0f;
+//
+//	  // Square the magnitude to obtain the power spectrum
+//	  freqVal = freqVal * freqVal;
 
 	  // Convert the power spectrum to decibels
-	  freqVal = 10.0f * (3 + ec_log10(freqVal));
+//	  freqVal = 10.0f * (3 + ec_log10(freqVal));
 
 	  // Update the output spectrum by taking the maximum value for each frequency bin
-	  outputSpectrum[I] = ec_max(outputSpectrum[I], freqVal);
+	  outputSpectrum[I] = ec_max(outputSpectrum[I],
+								 10.0f * (3 + ec_log10(freqVal * freqVal)));
 	}
 
 	// Move the starting index to the next window
