@@ -43,7 +43,7 @@ void fft(CArray& x)
   const size_t N = x.size();
   if (N <= 1) return;
 
-  CArray tmp(N);
+  CArray rearrangedData(N);
 
   // Rearrange the input array using bit reversal
   for (size_t i = 0; i < N; ++i) {
@@ -53,31 +53,31 @@ void fft(CArray& x)
 		j |= (1 << static_cast<int>(std::floor(std::log2(N)) - 1 - bit));
 	  }
 	}
-	tmp[j] = x[i];
+	rearrangedData[j] = x[i];
   }
 
   // In-place butterfly operations
   for (size_t len = 2; len <= N; len *= 2) {
 	constexpr float minusTwoPi = PI * -2.0f;
-	ec::Float real_part = ec::ec_cos(minusTwoPi/ ec::Float(len));
-	ec::Float imag_part = ec::ec_sin(minusTwoPi/ ec::Float(len));
-	Complex wlen(real_part, imag_part);
+	ec::Float realPart = ec::ec_cos(minusTwoPi / ec::Float(len));
+	ec::Float imagPart = ec::ec_sin(minusTwoPi / ec::Float(len));
+	Complex twiddleFactor(realPart, imagPart);
 
 	for (size_t start = 0; start < N; start += len) {
 	  Complex w(1);
+
 	  for (size_t i = 0; i < len / 2; ++i) {
-		Complex u = tmp[start + i];
-		Complex v = tmp[start + i + len / 2] * w;
-		tmp[start + i] = u + v;
-		tmp[start + i + len / 2] = u - v;
-		w *= wlen;
+		Complex twiddleProduct = rearrangedData[start + i + len / 2] * w;
+		rearrangedData[start + i + len / 2] = rearrangedData[start + i] - twiddleProduct;
+		rearrangedData[start + i] += twiddleProduct;
+		w *= twiddleFactor;
 	  }
+
 	}
   }
 
-  x = tmp;
+  x = std::move(rearrangedData);
 }
-
 
 // Function to compute the Fourier transform of the input signal
 CArray compute_fourier_transform(const std::vector<ec::Float>& input)
@@ -123,14 +123,8 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
   // Create a vector to store the final output spectrum, initialized with the lowest possible values
   std::vector<ec::Float> outputSpectrum(sizeSpectrum);
 
-  // Create a vector to store the Blackman window coefficients
-  std::vector<ec::Float> blackmanWinCoef(WINDOW_SIZE);
-  auto constantBlackmanCoefficients = constantBlackmanWinCoef();
+  std::array<float, WINDOW_SIZE> blackmanWinCoef = constantBlackmanWinCoef();
 
-  for (size_t I = 0; I < WINDOW_SIZE; I++) {
-	// Compute the Blackman window coefficient for each sample
-	blackmanWinCoef[I] = constantBlackmanCoefficients[I];
-  }
 
   // Initialize the starting index of the current window
   size_t idxStartWin = 0;
@@ -146,27 +140,31 @@ std::vector<ec::Float> process_signal(const std::vector<ec::Float>& inputSignal)
 
 	for (size_t I = 0; I < sizeSpectrum; I++) {
 
+	  constexpr float oneByWindowSize = (1.0f / WINDOW_SIZE);
 //	  ec::Float freqVal = signalFreqReal[I] * signalFreqReal[I] + signalFreqImag[I] * signalFreqImag[I];
-	  ec::Float freqVal = data[I].real() * data[I].real() + data[I].imag() * data[I].imag();
+	  ec::Float freqVal = (I > 0 && I < sizeSpectrum - 1) ?
+		  ec_sqrt(data[I].real() * data[I].real() + data[I].imag() * data[I].imag()) * oneByWindowSize * 2.0f:
+		  ec_sqrt(data[I].real() * data[I].real() + data[I].imag() * data[I].imag()) * oneByWindowSize ;
 
 	  // Take the square root to obtain the magnitude
-	  constexpr float oneByWindowSize = (1.0f / WINDOW_SIZE);
-	  freqVal = ec_sqrt(freqVal) * oneByWindowSize;
+//	  constexpr float oneByWindowSize = (1.0f / WINDOW_SIZE);
+//	  freqVal = ec_sqrt(freqVal) * oneByWindowSize;
 
 //	  // Normalize the magnitude by the window size
 //	  freqVal = freqVal * ec::Float(1 / WINDOW_SIZE);
 
-	  // Scale the magnitude by a factor of 2 for non-zero and non-DC frequency bins
-	  if (I > 0 && I < sizeSpectrum - 1) freqVal = freqVal * 2.0f;
-
-	  // Square the magnitude to obtain the power spectrum
-	  freqVal = freqVal * freqVal;
+//	  // Scale the magnitude by a factor of 2 for non-zero and non-DC frequency bins
+//	  if (I > 0 && I < sizeSpectrum - 1) freqVal = freqVal * 2.0f;
+//
+//	  // Square the magnitude to obtain the power spectrum
+//	  freqVal = freqVal * freqVal;
 
 	  // Convert the power spectrum to decibels
-	  freqVal = 10.0f * (3 + ec_log10(freqVal));
+//	  freqVal = 10.0f * (3 + ec_log10(freqVal));
 
 	  // Update the output spectrum by taking the maximum value for each frequency bin
-	  outputSpectrum[I] = ec_max(outputSpectrum[I], freqVal);
+	  outputSpectrum[I] = ec_max(outputSpectrum[I],
+								 10.0f * (3 + ec_log10(freqVal * freqVal)));
 	}
 
 	// Move the starting index to the next window
