@@ -39,7 +39,7 @@ typedef std::complex<ec::Float> Complex; // Define the complex number type
 typedef std::valarray<Complex> CArray; // Define the valarray of complex numbers type
 //
 
-void synthfftHW(){
+void synthfftHW(ec::Float wlenr, ec::Float wleni){
   ec::StreamHw& streamHW = *ec::StreamHw::getSingletonStreamHw();
   streamHW.resetStreamHw();
   streamHW.createFifos(51);
@@ -108,13 +108,21 @@ void synthfftHW(){
   //	- because it does not copy TODO finish
   // wr = wr * wlen.real() - wi * wlen.imag(); wlen as constant
   // wr * wlen.real():	12 * [wlen.real()] = 44
+  streamHW.addOpMulToPipeline(12, wlenr, 44);
+
   // - wi * wlen.imag() = 18 * [-1] = 45; 45 * [wlen.imag()] = 46
+  streamHW.addOpMulToPipeline(18, ecm1, 45);
+  streamHW.addOpMulToPipeline(45, wleni, 46);
   //  wr = + : 44 + 46 = 47
+  streamHW.addOpAddToPipeline(44, 46, 47);
   //
   //  wi = wr * wlen.imag() + wlen.real() * wi
   //  13 * [wlen.imag()] = 48;
+  streamHW.addOpMulToPipeline(13, wleni, 48);
   //  19 * [wlen.real()] = 49;
+  streamHW.addOpMulToPipeline(19, wleni, 49);
   //  wi: 48 + 49 = 50;
+  streamHW.addOpAddToPipeline(48, 49, 50);
 
 }
 
@@ -190,6 +198,7 @@ void fft(CArray& x)
 
   //how much data will be processed in parallel
   size_t sizeblock = 1;
+  //TODO copy part into memory
 
   //real part of vu
   streamHW.startStreamDataMemToFifo(0, 0, sizeblock);
@@ -226,6 +235,24 @@ void fft(CArray& x)
   //u imag part
   streamHW.startStreamDataMemToFifo(sizeblock*5, 22, sizeblock);
   streamHW.startStreamDataMemToFifo(sizeblock*5, 23, sizeblock);
+
+
+  //get data of the FIFO back to memory
+  //writing to u real and imag
+  streamHW.startStreamDataFifoToMem(38, 0, sizeblock);
+  streamHW.startStreamDataFifoToMem(39, sizeblock, sizeblock);
+
+  //writing to w real and w imag
+  streamHW.startStreamDataFifoToMem(47, sizeblock*2, sizeblock);
+  streamHW.startStreamDataFifoToMem(50, sizeblock*3, sizeblock);
+
+  //writing to v real and imag
+  streamHW.startStreamDataFifoToMem(41, sizeblock*4, sizeblock);
+  streamHW.startStreamDataFifoToMem(43, sizeblock*5, sizeblock);
+
+
+  streamHW.runPipeline();
+  //TODO get the data from Hardware into an vector
 
 
   // space 32 - ...
